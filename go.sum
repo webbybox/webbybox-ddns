@@ -1,0 +1,6 @@
+github.com/phuslu/log v1.0.118 h1:WYc5KwGRgd3PI8TyWm25ZgSF7kOBegg4eOlJHIsNah4=
+github.com/phuslu/log v1.0.118/go.mod h1:F8osGJADo5qLK/0F88djWwdyoZZ9xDJQL1HYRHFEkS0=
+github.com/webbybox/webbybox-logger v1.0.0 h1:ljFQMIJ49j0s+ie4FIQ/j9qjqG8TwRi6kLLdBSQ5a5k=
+github.com/webbybox/webbybox-logger v1.0.0/go.mod h1:PwTZSscb8gorTo/dX0R1uyPHwqvLhBaALBRqVwnbw+k=
+gopkg.in/natefinch/lumberjack.v2 v2.2.1 h1:bBRl1b0OH9s/DuPhuXpNl+VtCaJXFZ5/uEFST95x9zc=
+gopkg.in/natefinch/lumberjack.v2 v2.2.1/go.mod h1:YD8tP3GAjkrDg1eZH7EGmyESg/lsYskCTPBJVb9jqSc=

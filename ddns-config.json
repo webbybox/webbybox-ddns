@@ -1,0 +1,5 @@
+{
+    "secretPath": "/etc/webbybox/device_secret",
+    "intervalMinutes": 5,
+    "targetUrl": "https://ddns.webbybox.net/api/v1"
+}
