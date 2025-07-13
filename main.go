@@ -3,10 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	logger "github.com/webbybox/webbybox-logger"
@@ -15,9 +14,9 @@ import (
 var configPath = "./ddns-config.json"
 
 type config struct {
-	SecretPath      string `json:"secretPath"`
-	IntervalMinutes string `json:"intervalMinutes"`
-	TargetUrl       string `json:"targetUrl"`
+	SecretPath      string  `json:"secretPath"`
+	IntervalMinutes float32 `json:"intervalMinutes"`
+	TargetUrl       string  `json:"targetUrl"`
 }
 
 func loadConfig() (*config, error) {
@@ -36,19 +35,32 @@ func loadConfig() (*config, error) {
 	return cfg, nil
 }
 
-func getSecretStr(path string) (string, error) {
-	data, err := os.ReadFile(path)
+func getDataFromSecretPath(path string) (string, error) {
+	s, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
 
-	s := strings.TrimSpace(string(data))
-	return s, nil
+	return string(s), nil
 }
 
-func sendReq(secretStr string, targetUrl string) {
+func getPublicIP() (string, error) {
+	resp, err := http.Get("https://api.ipify.org")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	ip, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(ip), nil
+}
+
+func sendReq(ip string, secret string, targetUrl string) {
 	payload := map[string]string{
-		"secret": secretStr,
+		"ipAddress": ip,
+		"secret":    secret,
 	}
 
 	body, err := json.Marshal(payload)
@@ -77,23 +89,32 @@ func main() {
 		logger.Fatalf("Failed to load ddns config: %v", err)
 	}
 
-	intervalMin, err := strconv.Atoi(cfg.IntervalMinutes)
-	if err != nil || intervalMin <= 0 {
-		logger.Fatalf("Invalid intervalMinutes in config: %v", cfg.IntervalMinutes)
-	}
-
-	secretStr, err := getSecretStr(cfg.SecretPath)
+	secret, err := getDataFromSecretPath(cfg.SecretPath)
 	if err != nil {
 		logger.Fatalf("Failed to read device secret: %v", err)
 	}
 
-	// Send once on startup
-	sendReq(secretStr, cfg.TargetUrl)
+	var lastIP string
 
-	ticker := time.NewTicker(time.Duration(intervalMin) * time.Minute)
+	ticker := time.NewTicker(time.Duration(cfg.IntervalMinutes) * time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		sendReq(secretStr, cfg.TargetUrl)
+	for {
+		ip, err := getPublicIP()
+		if err != nil {
+			logger.Errorf("Could not retrieve public IP Address: %v", err)
+			goto waitNext
+		}
+
+		if ip != lastIP {
+			logger.Infof("Requesting update to Cloudflare dns record with new IP Address: %s", ip)
+			sendReq(ip, secret, cfg.TargetUrl)
+			lastIP = ip
+		} else {
+			logger.Infof("Public IP unchanged (%s), skipping update", ip)
+		}
+
+	waitNext:
+		<-ticker.C
 	}
 }
